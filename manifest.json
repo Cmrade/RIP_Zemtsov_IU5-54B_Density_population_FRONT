@@ -1,0 +1,29 @@
+{
+  "name": "ЧИСЛЕННОСТЬ.РФ",
+  "short_name": "ЧИСЛЕННОСТЬ",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#1f1f1f",
+  "theme_color": "#bb410f",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "scripts": {
+    "start": "react-scripts start",
+    "start:network": "set HOST=192.168.56.1.&&set HTTPS=true&&react-scripts start"
+  },
+  "scope": "/",
+  "description": "Главный вычислительный портал страны для расчета численности населения"
+}
