@@ -1,0 +1,583 @@
+.nav-section,
+.grey-block-2,
+.nav-service,
+.nav-application,
+.nav-images,
+.application-nav-image {
+    display: none !important;
+}
+
+/* Стили для шапки (attic) */
+.app-header {
+    position: fixed;
+    background-color: rgb(31, 31, 31);
+    height: 100px;
+    width: 100%;
+    top: 0px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+}
+
+.app-header-main {
+    position: fixed;
+    left: 85px;
+    top: 10px;
+    color: rgb(251, 251, 251);
+    font-family: "SourceSerifPro-SemiBold", sans-serif;
+    font-size: 48px;
+    font-weight: bold;
+}
+
+.app-header-dot {
+    position: fixed;
+    color: rgb(187, 65, 15);
+    font-family: "SourceSerifPro-SemiBold", sans-serif;
+    font-size: 48px;
+    font-weight: bold;
+    left: 455px;
+    top: 11px;
+}
+
+.app-header-dop {
+    position: fixed;
+    color: rgb(251, 251, 251);
+    font-family: "SourceSerifPro-SemiBold", sans-serif;
+    font-size: 23px;
+    left: 93px;
+    top: 60px;
+}
+
+/* Стили для кнопки Услуги в шапке */
+.nav-service-top {
+    transition: all 0.3s ease;
+    padding: 8px 16px;
+    border-radius: 8px;
+}
+
+.nav-service-top:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+}
+
+.back-button{
+    border-radius: 15px;
+}
+
+/* Стили для карточек */
+.population-card-custom {
+    width: 600px;
+    height: 340px;
+    margin-bottom: 20px;
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.population-card-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 20px;
+    transition: 0.3s ease;
+    object-fit: cover;
+}
+
+.population-card-img:hover {
+    transform: scale(1.01);
+}
+
+.population-flag {
+    position: absolute;
+    top: 25px;
+    border-top-right-radius: 15px;
+    border-bottom-right-radius: 15px;
+    background-color: rgb(187, 65, 15);
+    color: rgb(251, 251, 251);
+    font-family: 'Roboto-regular', Roboto, sans-serif;
+    font-size: 20px;
+    padding-left: 10px;
+    padding-top: 3px;
+    font-weight: bold;
+    width: 100px;
+    height: 35px;
+    z-index: 2;
+}
+
+.population-card-title {
+    position: absolute;
+    font-family: 'Roboto-regular', Roboto, sans-serif;
+    color: rgb(251, 251, 251);
+    font-size: 48px;
+    bottom: 80px;
+    left: 27px;
+    font-size: 48px;
+
+}
+
+.population-card-info {
+    position: absolute;
+    font-size: 36px;
+    font-family: 'Roboto-regular', Roboto, sans-serif;
+    bottom: 30px;
+    left: 70px;
+    color: rgb(251, 251, 251);
+}
+
+#rect{
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    left: 27px;
+    top: 270px;
+    background-color: rgb(187, 65, 15);
+    z-index: 2;
+}
+
+/* Стили для детальной страницы */
+.detail-page-title {
+    font-family: 'Roboto-regular', Roboto, sans-serif;
+    font-size: 70px;
+    color: rgb(38, 38, 38);
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.form-control{
+    font-family: 'Roboto-regular', Roboto, sans-serif;
+    font-size: 20px;
+    border-radius: 20px;
+}
+
+.btn-primary{
+    background-color: rgb(187, 65, 15);
+    border-top-left-radius: 120px;
+    border:none;
+}
+.btn-primary:hover{
+    background-color: rgb(155, 54, 14);
+}
+.btn-primary:active{
+    background-color: rgb(214, 104, 60);
+}
+
+.cards{
+    position: relative;
+    top: 30px;
+    left: 0px;
+    display: grid;
+    grid-template-columns: repeat(2, 620px);
+}
+
+.my-4{
+    font-family: 'Roboto-regular', Roboto, sans-serif;
+    font-size: 90px;
+    position: relative;
+    color: rgb(38, 38, 38);
+}
+
+.Breadcrumb.Item{
+    color: rgb(187, 65, 15);
+    font-size: 100px;
+}
+
+.detail-card {
+    position: relative;
+    width: 1350px;
+    height: 404px;
+    background-color: rgba(201, 201, 201, 0.1);
+    border: 1px solid rgba(190, 190, 190, 0.3);
+    border-radius: 50px;
+    padding: 30px;
+    margin-top: 30px;
+}
+
+.detail-card-img {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 500px;
+    height: 402px;
+    border-radius: 48px;
+}
+
+.detail-card-title {
+    position: relative;
+    font-family: 'Roboto-regular', Roboto, sans-serif;
+    color: black;
+    font-size: 50px;
+    left: 750px;
+    top: 0px;
+}
+
+.detail-card-info {
+    white-space: pre-wrap;
+    position: relative;
+    color: black;
+    font-family: 'Roboto-regular', Roboto, sans-serif;
+    font-size: 28px;
+    width: 712px;
+    height: 212px;
+    top: 20px;
+    left: 520px;
+}
+
+/* Стили для главной страницы */
+.main-title {
+    font-family: 'Roboto-regular', Roboto, sans-serif;
+    font-size: 70px;
+    color: rgb(38, 38, 38);
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.container {
+    margin-left: 70px;
+    margin-top: 100px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.lead{
+    font-family: 'Roboto-regular', Roboto, sans-serif;;
+}
+
+.lead-2{
+    font-family: 'Roboto-regular', Roboto, sans-serif;;
+}
+
+.information_card_on_home{
+    width: 434px;
+    height: 100px;
+}
+
+/* Адаптивные стили */
+@media (max-width: 768px) {
+    .population-card-custom {
+        width: 100%;
+        height: 300px;
+    }
+    
+    .detail-card-title {
+        font-size: 36px;
+    }
+    
+    .main-title {
+        font-size: 48px;
+    }
+    
+    .app-header-main,
+    .app-header-dot {
+        font-size: 36px;
+        left: 20px;
+    }
+    
+    .app-header-dop {
+        font-size: 16px;
+        left: 20px;
+        top: 50px;
+    }
+}
+
+.btn-app{
+    top: 200px;
+}
+
+.nav-service-top {
+    margin-left: -90px;
+    right: 270px;
+    top: 0px;
+    font-size: 20px;
+    position: relative;
+    color: white;
+    font-size: 28px;
+    font-family: 'Roboto-regular', Roboto, sans-serif;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.breadcrumb {
+  padding: 0.75rem 1rem;
+  position: fixed;
+  top: 100px;
+  background-color: #f8f9fa;
+  border-radius: 0.25rem;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+  content: ">";
+}
+
+/* Стили для AI поиска */
+.ai-search-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.ai-search-title {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.ai-search-description {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin-bottom: 20px;
+}
+
+.image-preview-container {
+    width: 200px;
+    height: 150px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 3px solid white;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.image-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-placeholder {
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: rgba(255,255,255,0.5);
+}
+
+.ai-progress-info {
+    font-size: 0.8rem;
+    margin-top: 5px;
+    color: rgba(255,255,255,0.8);
+}
+
+/* Для отображения эмбеддингов в отладке */
+.embedding-preview {
+    font-family: monospace;
+    font-size: 10px;
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    max-height: 100px;
+    overflow-y: auto;
+}
+
+/* src/index.css - добавить в конец файла */
+
+/* Стили для карусели медиа-файлов */
+.carousel-control-prev,
+.carousel-control-next {
+  width: 50px;
+  height: 50px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  opacity: 0.7;
+  transition: opacity 0.3s;
+}
+
+.carousel-control-prev:hover,
+.carousel-control-next:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.carousel-indicators {
+  bottom: 10px;
+}
+
+.carousel-indicators button {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin: 0 5px;
+}
+
+/* Адаптивность для видео */
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Заглушка для отсутствующих медиа */
+.media-placeholder {
+  width: 100%;
+  height: 300px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.2rem;
+  border-radius: 10px;
+}
+
+/* Добавьте в конец custom.css */
+
+/* Стили для карусели на странице подробнее */
+.detail-card-img .carousel {
+  width: 100%;
+  height: 100%;
+}
+
+.detail-card-img .carousel-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 48px;
+}
+
+.detail-card-img .carousel-item {
+  width: 100%;
+  height: 100%;
+}
+
+.detail-card-img .carousel-control-prev,
+.detail-card-img .carousel-control-next {
+  width: 50px;
+  height: 50px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  opacity: 0.7;
+  transition: opacity 0.3s;
+}
+
+.detail-card-img .carousel-control-prev:hover,
+.detail-card-img .carousel-control-next:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.detail-card-img .carousel-control-prev-icon,
+.detail-card-img .carousel-control-next-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.detail-card-img .carousel-indicators {
+  bottom: 15px;
+  margin-bottom: 0;
+}
+
+.detail-card-img .carousel-indicators button {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin: 0 5px;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.detail-card-img .carousel-indicators button.active {
+  background-color: rgb(187, 65, 15);
+}
+
+/* Стили для видео в карусели */
+.detail-card-img video {
+  border-radius: 48px;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+  .detail-card-img {
+    position: relative !important;
+    width: 100% !important;
+    height: auto !important;
+    margin-bottom: 20px;
+  }
+  
+  .detail-card-img .carousel {
+    height: 300px;
+  }
+  
+  .detail-card-img .carousel-control-prev,
+  .detail-card-img .carousel-control-next {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* Добавьте в custom.css */
+
+/* Улучшенные стили для видео в карусели */
+.detail-card-img video {
+  border-radius: 48px;
+  background-color: #000;
+}
+
+/* Стили для элементов управления видео */
+.detail-card-img video::-webkit-media-controls-panel {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.detail-card-img video::-webkit-media-controls-play-button {
+  background-color: rgb(187, 65, 15);
+  border-radius: 50%;
+}
+
+.detail-card-img video::-webkit-media-controls-current-time-display,
+.detail-card-img video::-webkit-media-controls-time-remaining-display {
+  color: white;
+  font-family: "'Roboto-regular', Roboto, sans-serif";
+}
+
+/* Индикатор состояния видео */
+.video-state-indicator {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: "'Roboto-regular', Roboto, sans-serif";
+  z-index: 10;
+}
+
+/* Сообщение об ошибке видео */
+.video-error-message {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  background-color: #333;
+  padding: 20px;
+  text-align: center;
+  border-radius: 48px;
+}
+
+/* Кнопка для открытия видео в новой вкладке */
+.video-open-button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: rgb(187, 65, 15);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: "'Roboto-regular', Roboto, sans-serif";
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.video-open-button:hover {
+  background-color: rgb(155, 54, 14);
+}
