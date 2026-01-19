@@ -54,7 +54,7 @@ const MyNavbar: React.FC = () => {
                   <img 
                     src="http://localhost:9000/static/img/density_calculation.png"
                     alt="Расчеты плотности"
-                    style={{ width: '24px', height: '24px', marginRight: '8px' }}
+                    style={{ width: '24px', height: '24px', marginRight: '8px', opacity: 1 }}
                   />
                   <span>Моя корзина</span>
                   {cartItemsCount > 0 && (

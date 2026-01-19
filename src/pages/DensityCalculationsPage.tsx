@@ -1,14 +1,10 @@
-import React, { useState, useEffect, useMemo, useReducer } from 'react';
-import { Container, Button, Card, Alert, Spinner, Form, Table, Badge, OverlayTrigger, Tooltip, ToggleButton, ButtonGroup } from 'react-bootstrap';
+import React, { useState, useEffect, useMemo, useReducer, useContext } from 'react'; // Добавляем useContext
+import { Container, Button, Card, Alert, Spinner, Form, Table, Badge, OverlayTrigger, Tooltip, ToggleButton, Modal } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { 
-  getCart, 
-  removePopulationFromDensityCalculation, 
-  formDensityCalculation,
-  getDensityCalculations 
-} from '../store/cartSlice';
 import { logout } from '../store/authSlice';
+import axiosInstance from '../services/axiosInstance';
+import { CartContext } from '../contexts/CartContext'; // Импортируем контекст
 
 // Определяем типы для состояния
 interface DensityCalculationsState {
@@ -20,6 +16,9 @@ interface DensityCalculationsState {
     direction: 'ascending' | 'descending';
   };
   filterToday: boolean;
+  showDeleteModal: boolean;
+  deleteLoading: boolean;
+  editingCommentId: number | null;
 }
 
 // Определяем типы действий
@@ -29,6 +28,9 @@ type DensityCalculationsAction =
   | { type: 'SET_VIEW_MODE'; payload: 'current' | 'history' }
   | { type: 'SET_SORT_CONFIG'; payload: { key: string; direction: 'ascending' | 'descending' } }
   | { type: 'SET_FILTER_TODAY'; payload: boolean }
+  | { type: 'SET_SHOW_DELETE_MODAL'; payload: boolean }
+  | { type: 'SET_DELETE_LOADING'; payload: boolean }
+  | { type: 'SET_EDITING_COMMENT_ID'; payload: number | null }
   | { type: 'RESET_FORM' }
   | { type: 'RESET_FILTERS' };
 
@@ -42,6 +44,9 @@ const initialState: DensityCalculationsState = {
     direction: 'descending'
   },
   filterToday: false,
+  showDeleteModal: false,
+  deleteLoading: false,
+  editingCommentId: null,
 };
 
 // Редьюсер для управления состоянием
@@ -65,6 +70,15 @@ const densityCalculationsReducer = (
     case 'SET_FILTER_TODAY':
       return { ...state, filterToday: action.payload };
     
+    case 'SET_SHOW_DELETE_MODAL':
+      return { ...state, showDeleteModal: action.payload };
+    
+    case 'SET_DELETE_LOADING':
+      return { ...state, deleteLoading: action.payload };
+    
+    case 'SET_EDITING_COMMENT_ID':
+      return { ...state, editingCommentId: action.payload };
+    
     case 'RESET_FORM':
       return { ...state, territoryArea: '', formError: '' };
     
@@ -84,34 +98,58 @@ const DensityCalculationsPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  
+  const cartContext = useContext(CartContext);
+  
+  if (!cartContext) {
+    throw new Error('CartContext must be used within CartProvider');
+  }
+  
   const { 
     currentDensityCalculation, 
     densityCalculations, 
     loading, 
-    error
-  } = useAppSelector((state) => state.cart);
+    error 
+  } = cartContext;
+  
+  const {
+    getCart,
+    getDensityCalculations: fetchDensityCalculations,
+    removePopulationFromDensityCalculation,
+    formDensityCalculation,
+    updatePopulationComment
+  } = cartContext;
   
   // Используем useReducer вместо useState
   const [state, stateDispatch] = useReducer(densityCalculationsReducer, initialState);
   
   // Деструктурируем состояние
-  const { territoryArea, formError, viewMode, sortConfig, filterToday } = state;
-  
-  // Состояние для сортировки (уже в редьюсере)
-  
-  // Состояние для фильтра "За сегодня" (уже в редьюсере)
+  const { 
+    territoryArea, 
+    formError, 
+    viewMode, 
+    sortConfig, 
+    filterToday,
+    showDeleteModal,
+    deleteLoading,
+    editingCommentId
+  } = state;
+
+  // Локальное состояние для редактируемых комментариев
+  const [editingComments, setEditingComments] = useState<{[key: number]: string}>({});
+  const [savingCommentId, setSavingCommentId] = useState<number | null>(null);
 
   useEffect(() => {
     console.log('DensityCalculationsPage mounted, isAuthenticated:', isAuthenticated);
     console.log('Current density calculation:', currentDensityCalculation);
     
     if (isAuthenticated) {
-      dispatch(getCart());
-      dispatch(getDensityCalculations());
+      getCart();
+      fetchDensityCalculations();
     } else {
       navigate('/login');
     }
-  }, [isAuthenticated, dispatch, navigate]);
+  }, [isAuthenticated, navigate]);
 
   useEffect(() => {
     console.log('currentDensityCalculation updated:', currentDensityCalculation);
@@ -120,10 +158,10 @@ const DensityCalculationsPage: React.FC = () => {
   const handleRemoveFromCart = async (populationInCalcId: number, populationId: number) => {
     if (currentDensityCalculation) {
       try {
-        await dispatch(removePopulationFromDensityCalculation({
-          densityCalculationId: currentDensityCalculation.id,
-          populationId: populationId
-        })).unwrap();
+        await removePopulationFromDensityCalculation(
+          currentDensityCalculation.id,
+          populationId
+        );
       } catch (error) {
         console.error('Error removing from cart:', error);
         alert('Ошибка удаления типа населения');
@@ -143,16 +181,15 @@ const DensityCalculationsPage: React.FC = () => {
     }
 
     try {
-      await dispatch(formDensityCalculation({
-        densityCalculationId: currentDensityCalculation.id,
-        territory_area: parseFloat(territoryArea)
-      })).unwrap();
+      await formDensityCalculation(
+        currentDensityCalculation.id,
+        parseFloat(territoryArea)
+      );
       
       // Сбрасываем форму
       stateDispatch({ type: 'RESET_FORM' });
       
       alert('Расчет плотности успешно сформирован!');
-      dispatch(getDensityCalculations());
       stateDispatch({ type: 'SET_VIEW_MODE', payload: 'history' });
     } catch (error: any) {
       console.error('Form density calculation error:', error);
@@ -232,9 +269,9 @@ const DensityCalculationsPage: React.FC = () => {
 
   // Сортируем данные с учетом фильтра "За сегодня"
   const sortedCalculations = useMemo(() => {
-    // Сначала фильтруем по статусу (не черновики)
+    // Сначала фильтруем по статусу (не черновики и не удаленные)
     let filteredItems = densityCalculations
-      .filter((calc: any) => calc.status !== 'DRAFT');
+      .filter((calc: any) => calc.status !== 'DRAFT' && calc.status !== 'DELETED');
 
     // Применяем фильтр "За сегодня" если он включен
     if (filterToday) {
@@ -286,7 +323,7 @@ const DensityCalculationsPage: React.FC = () => {
   // Получаем количество заявок за сегодня
   const todayCalculationsCount = useMemo(() => {
     return densityCalculations.filter((calc: any) => 
-      calc.status !== 'DRAFT' && 
+      calc.status !== 'DRAFT' && calc.status !== 'DELETED' && 
       (isToday(calc.formation_datetime) || isToday(calc.creation_datetime))
     ).length;
   }, [densityCalculations]);
@@ -294,12 +331,9 @@ const DensityCalculationsPage: React.FC = () => {
   // Вычисляем общую сумму расчетной численности для отображаемых расчетов
   const totalCalculatedPopulation = useMemo(() => {
     return sortedCalculations.reduce((total: number, calc: any) => {
-      // Используем calculated_population_formatted если есть, иначе calculated_population
       const population = calc.calculated_population_formatted || calc.calculated_population;
       
-      // Преобразуем в число, удаляя нецифровые символы кроме точки
       if (typeof population === 'string') {
-        // Удаляем все нецифровые символы кроме точки и запятой
         const cleanStr = population.replace(/[^\d.,]/g, '').replace(',', '.');
         const num = parseFloat(cleanStr);
         return !isNaN(num) ? total + num : total;
@@ -313,10 +347,8 @@ const DensityCalculationsPage: React.FC = () => {
   // Вычисляем общую сумму площади территории для отображаемых расчетов
   const totalTerritoryArea = useMemo(() => {
     return sortedCalculations.reduce((total: number, calc: any) => {
-      // Используем territory_area_formatted если есть, иначе territory_area
       const area = calc.territory_area_formatted || calc.territory_area;
       
-      // Преобразуем в число
       if (typeof area === 'string') {
         const cleanStr = area.replace(/[^\d.,]/g, '').replace(',', '.');
         const num = parseFloat(cleanStr);
@@ -340,6 +372,168 @@ const DensityCalculationsPage: React.FC = () => {
       maximumFractionDigits: 2
     }).format(num);
   };
+
+  // Функция для открытия модального окна удаления черновика
+  const openDeleteModal = () => {
+    stateDispatch({ type: 'SET_SHOW_DELETE_MODAL', payload: true });
+  };
+
+  // Функция для закрытия модального окна
+  const closeDeleteModal = () => {
+    stateDispatch({ type: 'SET_SHOW_DELETE_MODAL', payload: false });
+    stateDispatch({ type: 'SET_DELETE_LOADING', payload: false });
+  };
+
+  // Функция для удаления черновой заявки
+  const handleDeleteDraft = async () => {
+    if (!currentDensityCalculation) return;
+    
+    stateDispatch({ type: 'SET_DELETE_LOADING', payload: true });
+    
+    try {
+      await axiosInstance.delete(`/density_calculations/${currentDensityCalculation.id}/`);
+      
+      await getCart();
+      await fetchDensityCalculations();
+      
+      alert(`Черновик расчета #${currentDensityCalculation.id} успешно удален!`);
+      closeDeleteModal();
+      navigate('/populations');
+      
+    } catch (error: any) {
+      console.error('Ошибка удаления черновика:', error);
+      
+      let errorMessage = 'Не удалось удалить черновик расчета';
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 403) {
+        errorMessage = 'У вас нет прав на удаление этого расчета';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Расчет не найден';
+      }
+      
+      alert(`Ошибка: ${errorMessage}`);
+      stateDispatch({ type: 'SET_DELETE_LOADING', payload: false });
+    }
+  };
+
+  // Функция для начала редактирования комментария
+  const startEditComment = (item: any) => {
+    stateDispatch({ type: 'SET_EDITING_COMMENT_ID', payload: item.id });
+    setEditingComments({
+      ...editingComments,
+      [item.id]: item.comment || ''
+    });
+  };
+
+  // Функция для сохранения комментария
+  const saveComment = async (item: any) => {
+    if (!currentDensityCalculation) return;
+    
+    const newComment = editingComments[item.id] || '';
+    setSavingCommentId(item.id);
+    
+    try {
+      await updatePopulationComment(
+        currentDensityCalculation.id,
+        item.population,
+        newComment
+      );
+      
+      stateDispatch({ type: 'SET_EDITING_COMMENT_ID', payload: null });
+      const newEditingComments = { ...editingComments };
+      delete newEditingComments[item.id];
+      setEditingComments(newEditingComments);
+      
+    } catch (error: any) {
+      console.error('Ошибка обновления комментария:', error);
+      
+      let errorMessage = 'Не удалось обновить комментарий';
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      alert(`Ошибка: ${errorMessage}`);
+    } finally {
+      setSavingCommentId(null);
+    }
+  };
+
+  // Функция для отмены редактирования комментария
+  const cancelEditComment = (itemId: number) => {
+    stateDispatch({ type: 'SET_EDITING_COMMENT_ID', payload: null });
+    const newEditingComments = { ...editingComments };
+    delete newEditingComments[itemId];
+    setEditingComments(newEditingComments);
+  };
+
+  // Функция для обработки изменения значения комментария
+  const handleCommentChange = (itemId: number, value: string) => {
+    setEditingComments({
+      ...editingComments,
+      [itemId]: value
+    });
+  };
+
+  // Модальное окно подтверждения удаления черновика
+  const DeleteDraftModal = () => (
+    <Modal show={showDeleteModal} onHide={closeDeleteModal}>
+      <Modal.Header closeButton>
+        <Modal.Title>Удаление черновика расчета</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        {currentDensityCalculation && (
+          <div>
+            <p>Вы уверены, что хотите удалить черновик расчета <strong>#{currentDensityCalculation.id}</strong>?</p>
+            
+            {currentDensityCalculation.populations && currentDensityCalculation.populations.length > 0 ? (
+              <Alert variant="danger" className="mt-3">
+                ⚠️ В черновике содержится {currentDensityCalculation.populations.length} тип(ов) населения.
+                Все добавленные типы населения будут удалены вместе с черновиком!
+              </Alert>
+            ) : (
+              <Alert variant="info" className="mt-3">
+                Черновик пуст. Вы можете безопасно удалить его.
+              </Alert>
+            )}
+            
+            <Alert variant="warning">
+              ❗ Это действие нельзя отменить. Черновик будет помечен как удаленный и не подлежит восстановлению.
+            </Alert>
+          </div>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button 
+          variant="secondary" 
+          onClick={closeDeleteModal}
+          disabled={deleteLoading}
+        >
+          Отмена
+        </Button>
+        <Button 
+          variant="danger" 
+          onClick={handleDeleteDraft}
+          disabled={deleteLoading}
+        >
+          {deleteLoading ? (
+            <>
+              <Spinner animation="border" size="sm" className="me-2" />
+              Удаление...
+            </>
+          ) : (
+            'Удалить черновик'
+          )}
+        </Button>
+      </Modal.Footer>
+    </Modal>
+  );
 
   if (loading && !currentDensityCalculation && !densityCalculations.length) {
     return (
@@ -394,7 +588,7 @@ const DensityCalculationsPage: React.FC = () => {
         >
           История расчетов
           <span className="badge bg-secondary ms-2">
-            {densityCalculations.filter((calc: any) => calc.status !== 'DRAFT').length}
+            {densityCalculations.filter((calc: any) => calc.status !== 'DRAFT' && calc.status !== 'DELETED').length}
           </span>
         </Button>
       </div>
@@ -404,8 +598,13 @@ const DensityCalculationsPage: React.FC = () => {
 
       {viewMode === 'current' ? (
         <Card>
-          <Card.Header>
-            <h3>Текущий расчет плотности</h3>
+          <Card.Header className="d-flex justify-content-between align-items-center">
+            <h3 className="mb-0">Текущий расчет плотности</h3>
+            {currentDensityCalculation && (
+              <Badge bg={currentDensityCalculation.status === 'DRAFT' ? 'secondary' : 'primary'}>
+                {currentDensityCalculation.status === 'DRAFT' ? 'ЧЕРНОВИК' : currentDensityCalculation.status}
+              </Badge>
+            )}
           </Card.Header>
           <Card.Body>
             {!currentDensityCalculation || !currentDensityCalculation.populations || currentDensityCalculation.populations.length === 0 ? (
@@ -454,16 +653,67 @@ const DensityCalculationsPage: React.FC = () => {
                             </div>
                           )}
                         </td>
-                        <td>{item.comment || 'Без комментария'}</td>
                         <td>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => handleRemoveFromCart(item.id, item.population)}
-                            disabled={loading}
-                          >
-                            Удалить
-                          </Button>
+                          {editingCommentId === item.id ? (
+                            <Form.Control
+                              type="text"
+                              value={editingComments[item.id] || ''}
+                              onChange={(e) => handleCommentChange(item.id, e.target.value)}
+                              placeholder="Введите комментарий"
+                              autoFocus
+                            />
+                          ) : (
+                            <span>{item.comment || 'Без комментария'}</span>
+                          )}
+                        </td>
+                        <td>
+                          <div className="d-flex flex-column gap-2">
+                            {editingCommentId === item.id ? (
+                              <>
+                                <Button
+                                  variant="success"
+                                  size="sm"
+                                  onClick={() => saveComment(item)}
+                                  disabled={savingCommentId === item.id}
+                                >
+                                  {savingCommentId === item.id ? (
+                                    <>
+                                      <Spinner animation="border" size="sm" className="me-2" />
+                                      Сохранение...
+                                    </>
+                                  ) : (
+                                    'Сохранить комментарий'
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="outline-secondary"
+                                  size="sm"
+                                  onClick={() => cancelEditComment(item.id)}
+                                  disabled={savingCommentId === item.id}
+                                >
+                                  Отмена
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  variant="outline-primary"
+                                  size="sm"
+                                  onClick={() => startEditComment(item)}
+                                >
+                                  Изменить комментарий
+                                </Button>
+                                <Button
+                                  variant="outline-danger"
+                                  size="sm"
+                                  onClick={() => handleRemoveFromCart(item.id, item.population)}
+                                  disabled={loading}
+                                >
+                                  Удалить из расчета
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -509,6 +759,27 @@ const DensityCalculationsPage: React.FC = () => {
                     </Form.Text>
                   </Form.Group>
                 </div>
+
+                {/* Кнопка для удаления черновика */}
+                <div className="mt-3 p-3 border rounded bg-light">
+                  <h5>Удаление черновика</h5>
+                  <p className="text-muted">
+                    Если вы хотите начать новый расчет, вы можете удалить текущий черновик.
+                  </p>
+                  <Button 
+                    variant="secondary" 
+                    onClick={() => navigate('/populations')}
+                    className="me-2"
+                  >
+                    Сохранить и вернуться к услугам
+                  </Button>
+                  <Button 
+                    variant="danger" 
+                    onClick={openDeleteModal}
+                  >
+                    Удалить черновик
+                  </Button>
+                </div>
               </>
             )}
           </Card.Body>
@@ -551,7 +822,7 @@ const DensityCalculationsPage: React.FC = () => {
             </div>
           </Card.Header>
           <Card.Body>
-            {densityCalculations.length === 0 ? (
+            {sortedCalculations.length === 0 ? (
               <Alert variant="info">
                 У вас нет сформированных расчетов плотности
               </Alert>
@@ -582,7 +853,7 @@ const DensityCalculationsPage: React.FC = () => {
                       <small>
                         {filterToday ? 
                           `Показаны расчеты за сегодня: ${sortedCalculations.length} из ${todayCalculationsCount}` :
-                          `Всего расчетов: ${densityCalculations.filter((calc: any) => calc.status !== 'DRAFT').length}`
+                          `Показано ${sortedCalculations.length} из ${densityCalculations.filter((calc: any) => calc.status !== 'DRAFT' && calc.status !== 'DELETED').length} расчетов`
                         }
                       </small>
                     </div>
@@ -710,10 +981,8 @@ const DensityCalculationsPage: React.FC = () => {
                         <td style={{ fontWeight: 'bold', textAlign: 'left' }}>
                           {totalTerritoryArea > 0 ? formatNumber(totalTerritoryArea) + ' га' : '-'}
                         </td>
-                        <td colSpan={1} style={{ fontWeight: 'bold', textAlign: 'left', color: '#198754' }}>
+                        <td colSpan={2} style={{ fontWeight: 'bold', textAlign: 'left', color: '#198754' }}>
                           {totalCalculatedPopulation > 0 ? formatNumber(totalCalculatedPopulation) + ' чел.' : '-'}
-                        </td>
-                        <td colSpan={1} style={{ fontStyle: 'italic', color: '#6c757d' }}>
                         </td>
                       </tr>
                     </tfoot>
@@ -725,7 +994,7 @@ const DensityCalculationsPage: React.FC = () => {
                     {filterToday 
                       ? `Показано ${sortedCalculations.length} расчетов за сегодня` +
                         (totalCalculatedPopulation > 0 ? ` | Общая численность: ${formatNumber(totalCalculatedPopulation)} чел.` : '')
-                      : `Показано ${sortedCalculations.length} из ${densityCalculations.filter((calc: any) => calc.status !== 'DRAFT').length} расчетов` +
+                      : `Показано ${sortedCalculations.length} из ${densityCalculations.filter((calc: any) => calc.status !== 'DRAFT' && calc.status !== 'DELETED').length} расчетов` +
                         (totalCalculatedPopulation > 0 ? ` | Общая численность: ${formatNumber(totalCalculatedPopulation)} чел.` : '')
                     }
                   </small>
@@ -735,6 +1004,9 @@ const DensityCalculationsPage: React.FC = () => {
           </Card.Body>
         </Card>
       )}
+
+      {/* Модальное окно подтверждения удаления черновика */}
+      <DeleteDraftModal />
     </Container>
   );
 };

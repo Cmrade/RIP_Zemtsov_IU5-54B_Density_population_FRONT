@@ -19,10 +19,15 @@ import './styles/custom.css';
 // Импортируем тестовую страницу поиска
 import TestSearchPage from './pages/TestSearchPage';
 
+// Создаем обертку для защищенных маршрутов с использованием Context
+const ProtectedRouteWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return <ProtectedRoute>{children}</ProtectedRoute>;
+};
+
 function App() {
   return (
     <Provider store={store}>
-      {/* Оборачиваем приложение в CartProvider */}
+      {/* Оборачиваем приложение в CartProvider - теперь корзина доступна во всем приложении через useContext */}
       <CartProvider>
         <Router basename="/react-population-app">
           <div className="App">
@@ -34,7 +39,17 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/populations" element={<PopulationsList />} />
                 <Route path="/populations/:id" element={<PopulationDetail />} />
-                <Route path="/density-calculations" element={<DensityCalculationsPage />} />
+                
+                {/* Защищенные маршруты - требуют аутентификации */}
+                <Route 
+                  path="/density-calculations" 
+                  element={
+                    <ProtectedRouteWrapper>
+                      <DensityCalculationsPage />
+                    </ProtectedRouteWrapper>
+                  } 
+                />
+                
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 

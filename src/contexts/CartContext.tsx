@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { apiService } from '../services/api';
 
-// Базовые типы без зависимости от внешних типов
+// Типы на основе вашего API
 interface PopulationInCart {
   id: number;
   population: number;
@@ -12,9 +12,9 @@ interface PopulationInCart {
   people_per_building?: number;
 }
 
-type DensityCalculationStatus = 'DRAFT' | 'FORMED' | 'COMPLETED' | 'REJECTED' | 'DELETED';
+export type DensityCalculationStatus = 'DRAFT' | 'FORMED' | 'COMPLETED' | 'REJECTED' | 'DELETED';
 
-interface DensityCalculation {
+export interface DensityCalculation {
   id: number;
   status: DensityCalculationStatus;
   creation_datetime: string;
@@ -27,16 +27,17 @@ interface DensityCalculation {
   populations: PopulationInCart[];
 }
 
-interface CartState {
+interface CartContextType {
+  // Состояние
   currentDensityCalculation: DensityCalculation | null;
   densityCalculations: DensityCalculation[];
   loading: boolean;
   error: string | null;
-}
-
-interface CartActions {
+  
+  // Действия
   getCart: () => Promise<void>;
   getDensityCalculations: () => Promise<void>;
+  getOrCreateDraftCalculation: () => Promise<{ density_calculation_id: number }>;
   addPopulationToDensityCalculation: (
     populationId: number, 
     densityCalculationId?: number, 
@@ -50,19 +51,23 @@ interface CartActions {
     densityCalculationId: number, 
     territory_area: number
   ) => Promise<void>;
+  updatePopulationComment: (
+    densityCalculationId: number,
+    populationId: number,
+    comment: string
+  ) => Promise<void>;
   clearError: () => void;
+  refreshCart: () => Promise<void>;
 }
 
-type CartContextType = CartState & CartActions;
+// Создаем контекст с начальным значением undefined
+export const CartContext = createContext<CartContextType | undefined>(undefined);
 
-// Создаем контекст
-const CartContext = createContext<CartContextType | undefined>(undefined);
-
-// Хук для использования контекста
-export const useCart = () => {
+// Создаем кастомный хук для использования контекста
+export const useCartContext = () => {
   const context = useContext(CartContext);
   if (!context) {
-    throw new Error('useCart must be used within CartProvider');
+    throw new Error('useCartContext must be used within CartProvider');
   }
   return context;
 };
@@ -74,91 +79,119 @@ interface CartProviderProps {
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   // Состояние корзины
-  const [state, setState] = useState<CartState>({
-    currentDensityCalculation: null,
-    densityCalculations: [],
-    loading: false,
-    error: null,
-  });
+  const [currentDensityCalculation, setCurrentDensityCalculation] = useState<DensityCalculation | null>(null);
+  const [densityCalculations, setDensityCalculations] = useState<DensityCalculation[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Очистка ошибки
   const clearError = useCallback(() => {
-    setState(prev => ({ ...prev, error: null }));
+    setError(null);
   }, []);
-
-  // Преобразование данных из API в наш тип
-  const transformDensityCalculation = (data: any): DensityCalculation => {
-    return {
-        id: data.id,
-        status: data.status,
-        creation_datetime: data.creation_datetime,
-        formation_datetime: data.formation_datetime,
-        territory_area: data.territory_area,
-        territory_area_formatted: data.territory_area_formatted,
-        calculated_population: data.calculated_population,
-        calculated_population_formatted: data.calculated_population_formatted,
-        description: data.description,
-        populations: (data.populations || []).map((pop: any) => ({
-        id: pop.id,
-        population: pop.population,
-        population_title: pop.population_title,
-        population_image: pop.population_image,
-        comment: pop.comment || '',
-        building_density: pop.building_density,
-        people_per_building: pop.people_per_building
-        }))
-    };
-    };
 
   // Получение текущей корзины
   const getCart = useCallback(async () => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    setLoading(true);
+    setError(null);
     
     try {
+      console.log('🛒 Загрузка корзины...');
       const cartData = await apiService.getCart();
-      console.log('📦 Cart data loaded:', cartData);
+      console.log('✅ Корзина загружена:', cartData);
       
-      const transformedData = cartData ? transformDensityCalculation(cartData) : null;
+      // Преобразуем данные в нужный формат
+      const transformedData: DensityCalculation = {
+        id: cartData.id,
+        status: cartData.status,
+        creation_datetime: cartData.creation_datetime,
+        formation_datetime: cartData.formation_datetime,
+        territory_area: cartData.territory_area,
+        territory_area_formatted: cartData.territory_area_formatted,
+        calculated_population: cartData.calculated_population,
+        calculated_population_formatted: cartData.calculated_population_formatted,
+        description: cartData.description,
+        populations: (cartData.populations || []).map((pop: any) => ({
+          id: pop.id,
+          population: pop.population,
+          population_title: pop.population_title,
+          population_image: pop.population_image,
+          comment: pop.comment || '',
+          building_density: pop.building_density,
+          people_per_building: pop.people_per_building
+        }))
+      };
       
-      setState(prev => ({ 
-        ...prev, 
-        currentDensityCalculation: transformedData,
-        loading: false 
-      }));
+      setCurrentDensityCalculation(transformedData);
     } catch (error: any) {
-      console.error('❌ Error loading cart:', error);
-      setState(prev => ({ 
-        ...prev, 
-        error: error.message || 'Ошибка загрузки корзины',
-        loading: false 
-      }));
+      console.error('❌ Ошибка загрузки корзины:', error);
+      setError(error.message || 'Ошибка загрузки корзины');
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   // Получение всех расчетов
   const getDensityCalculations = useCallback(async () => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    setLoading(true);
+    setError(null);
     
     try {
+      console.log('📊 Загрузка всех расчетов...');
       const calculations = await apiService.getDensityCalculations();
-      console.log('📊 Density calculations loaded:', calculations.length);
+      console.log('✅ Расчеты загружены:', calculations.length);
       
-      const transformedCalculations = calculations.map(transformDensityCalculation);
-      
-      setState(prev => ({ 
-        ...prev, 
-        densityCalculations: transformedCalculations,
-        loading: false 
+      const transformedCalculations: DensityCalculation[] = calculations.map((calc: any) => ({
+        id: calc.id,
+        status: calc.status,
+        creation_datetime: calc.creation_datetime,
+        formation_datetime: calc.formation_datetime,
+        territory_area: calc.territory_area,
+        territory_area_formatted: calc.territory_area_formatted,
+        calculated_population: calc.calculated_population,
+        calculated_population_formatted: calc.calculated_population_formatted,
+        description: calc.description,
+        populations: (calc.populations || []).map((pop: any) => ({
+          id: pop.id,
+          population: pop.population,
+          population_title: pop.population_title,
+          population_image: pop.population_image,
+          comment: pop.comment || '',
+          building_density: pop.building_density,
+          people_per_building: pop.people_per_building
+        }))
       }));
+      
+      setDensityCalculations(transformedCalculations);
     } catch (error: any) {
-      console.error('❌ Error loading density calculations:', error);
-      setState(prev => ({ 
-        ...prev, 
-        error: error.message || 'Ошибка загрузки расчетов плотности',
-        loading: false 
-      }));
+      console.error('❌ Ошибка загрузки расчетов:', error);
+      setError(error.message || 'Ошибка загрузки расчетов плотности');
+    } finally {
+      setLoading(false);
     }
   }, []);
+
+  // Получение или создание черновика расчета
+  const getOrCreateDraftCalculation = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log('🔄 Получение или создание черновика...');
+      const draftResult = await apiService.getOrCreateDraftCalculation();
+      console.log('✅ Черновик получен:', draftResult);
+      
+      // После создания черновика обновляем корзину
+      await getCart();
+      
+      return draftResult;
+    } catch (error: any) {
+      console.error('❌ Ошибка создания черновика:', error);
+      setError(error.message || 'Ошибка создания черновика расчета');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [getCart]);
 
   // Добавление населения в расчет
   const addPopulationToDensityCalculation = useCallback(async (
@@ -166,55 +199,60 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     densityCalculationId?: number, 
     comment?: string
   ) => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    setLoading(true);
+    setError(null);
     
     try {
       // Если не передан ID расчета, используем текущий
-      const calcId = densityCalculationId || state.currentDensityCalculation?.id;
+      const calcId = densityCalculationId || currentDensityCalculation?.id;
       
       if (!calcId) {
-        throw new Error('Не найден расчет плотности. Создайте новый расчет.');
+        // Если нет расчета, создаем черновик
+        const draftResult = await getOrCreateDraftCalculation();
+        const newCalcId = draftResult.density_calculation_id;
+        
+        console.log(`🛒 Добавление населения ${populationId} в расчет ${newCalcId}`);
+        await apiService.addPopulationToDensityCalculation(newCalcId, populationId, comment);
+      } else {
+        console.log(`🛒 Добавление населения ${populationId} в расчет ${calcId}`);
+        await apiService.addPopulationToDensityCalculation(calcId, populationId, comment);
       }
       
-      await apiService.addPopulationToDensityCalculation(calcId, populationId, comment);
-      
-      // Обновляем данные корзины
+      // Обновляем корзину
       await getCart();
+      console.log('✅ Население успешно добавлено');
       
-      console.log('✅ Population added to calculation');
     } catch (error: any) {
-      console.error('❌ Error adding population to calculation:', error);
-      setState(prev => ({ 
-        ...prev, 
-        error: error.message || 'Ошибка добавления типа населения в расчет',
-        loading: false 
-      }));
+      console.error('❌ Ошибка добавления населения в расчет:', error);
+      setError(error.message || 'Ошибка добавления типа населения в расчет');
       throw error;
+    } finally {
+      setLoading(false);
     }
-  }, [state.currentDensityCalculation?.id, getCart]);
+  }, [currentDensityCalculation?.id, getOrCreateDraftCalculation, getCart]);
 
   // Удаление населения из расчета
   const removePopulationFromDensityCalculation = useCallback(async (
     densityCalculationId: number, 
     populationId: number
   ) => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    setLoading(true);
+    setError(null);
     
     try {
+      console.log(`🗑️ Удаление населения ${populationId} из расчета ${densityCalculationId}`);
       await apiService.removePopulationFromDensityCalculation(densityCalculationId, populationId);
       
-      // Обновляем данные корзины
+      // Обновляем корзину
       await getCart();
+      console.log('✅ Население успешно удалено');
       
-      console.log('✅ Population removed from calculation');
     } catch (error: any) {
-      console.error('❌ Error removing population from calculation:', error);
-      setState(prev => ({ 
-        ...prev, 
-        error: error.message || 'Ошибка удаления типа населения из расчета',
-        loading: false 
-      }));
+      console.error('❌ Ошибка удаления населения из расчета:', error);
+      setError(error.message || 'Ошибка удаления типа населения из расчета');
       throw error;
+    } finally {
+      setLoading(false);
     }
   }, [getCart]);
 
@@ -223,33 +261,70 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     densityCalculationId: number, 
     territory_area: number
   ) => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    setLoading(true);
+    setError(null);
     
     try {
+      console.log(`📋 Формирование расчета ${densityCalculationId} с площадью ${territory_area} га`);
       await apiService.formDensityCalculation(densityCalculationId, territory_area);
       
       // Обновляем все данные
       await Promise.all([getCart(), getDensityCalculations()]);
+      console.log('✅ Расчет успешно сформирован');
       
-      console.log('✅ Density calculation formed successfully');
     } catch (error: any) {
-      console.error('❌ Error forming density calculation:', error);
-      setState(prev => ({ 
-        ...prev, 
-        error: error.message || 'Ошибка формирования расчета плотности',
-        loading: false 
-      }));
+      console.error('❌ Ошибка формирования расчета:', error);
+      setError(error.message || 'Ошибка формирования расчета плотности');
       throw error;
+    } finally {
+      setLoading(false);
     }
   }, [getCart, getDensityCalculations]);
 
-  // Загружаем данные при монтировании
+  // Обновление комментария населения в расчете
+  const updatePopulationComment = useCallback(async (
+    densityCalculationId: number,
+    populationId: number,
+    comment: string
+  ) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log(`✏️ Обновление комментария для населения ${populationId} в расчете ${densityCalculationId}`);
+      
+      // В вашем API нет прямого метода для обновления комментария,
+      // поэтому можно использовать существующий endpoint или создать новый
+      // Для примера, предположим, что есть endpoint PUT /density_calculations/{id}/populations/{population_id}/
+      // Так как его нет в вашем api.ts, я добавлю заглушку
+      
+      // Временное решение: удалить и добавить снова с новым комментарием
+      await removePopulationFromDensityCalculation(densityCalculationId, populationId);
+      await addPopulationToDensityCalculation(populationId, densityCalculationId, comment);
+      
+      console.log('✅ Комментарий успешно обновлен');
+      
+    } catch (error: any) {
+      console.error('❌ Ошибка обновления комментария:', error);
+      setError(error.message || 'Ошибка обновления комментария');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [removePopulationFromDensityCalculation, addPopulationToDensityCalculation]);
+
+  // Обновление корзины
+  const refreshCart = useCallback(async () => {
+    await getCart();
+  }, [getCart]);
+
+  // Загружаем начальные данные при монтировании
   useEffect(() => {
     const loadInitialData = async () => {
       try {
         await Promise.all([getCart(), getDensityCalculations()]);
       } catch (error) {
-        console.error('Error loading initial cart data:', error);
+        console.error('Ошибка загрузки начальных данных:', error);
       }
     };
     
@@ -259,18 +334,21 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   // Значение контекста
   const contextValue: CartContextType = {
     // Состояние
-    currentDensityCalculation: state.currentDensityCalculation,
-    densityCalculations: state.densityCalculations,
-    loading: state.loading,
-    error: state.error,
+    currentDensityCalculation,
+    densityCalculations,
+    loading,
+    error,
     
     // Действия
     getCart,
     getDensityCalculations,
+    getOrCreateDraftCalculation,
     addPopulationToDensityCalculation,
     removePopulationFromDensityCalculation,
     formDensityCalculation,
+    updatePopulationComment,
     clearError,
+    refreshCart,
   };
 
   return (
@@ -280,28 +358,5 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   );
 };
 
-// Вспомогательные хуки для конкретных данных
-export const useCartState = () => {
-  const { currentDensityCalculation, densityCalculations, loading, error } = useCart();
-  return { currentDensityCalculation, densityCalculations, loading, error };
-};
-
-export const useCartActions = () => {
-  const { 
-    getCart, 
-    getDensityCalculations, 
-    addPopulationToDensityCalculation, 
-    removePopulationFromDensityCalculation, 
-    formDensityCalculation,
-    clearError 
-  } = useCart();
-  
-  return { 
-    getCart, 
-    getDensityCalculations, 
-    addPopulationToDensityCalculation, 
-    removePopulationFromDensityCalculation, 
-    formDensityCalculation,
-    clearError 
-  };
-};
+// Экспортируем сам контекст для использования с useContext
+export default CartContext;

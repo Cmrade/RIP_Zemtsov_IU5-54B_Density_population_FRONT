@@ -1,13 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react'; // Добавляем useContext
 import { PopulationWithScore } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { MEDIA_BASE_URL } from '../services/axiosInstance';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { 
-  addPopulationToDensityCalculation,
-  getOrCreateDraftCalculation
-} from '../store/cartSlice';
+import { useAppSelector } from '../store/hooks';
 import { Button, Spinner, Alert } from 'react-bootstrap';
+import { CartContext } from '../contexts/CartContext'; // Импортируем контекст
 
 interface PopulationCardProps {
   population: PopulationWithScore;
@@ -21,9 +18,17 @@ const getScoreColor = (score: number): string => {
 
 const PopulationCard: React.FC<PopulationCardProps> = ({ population }) => {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
-  const { currentDensityCalculation, loading } = useAppSelector((state) => state.cart);
+  
+  const cartContext = useContext(CartContext);
+  
+  if (!cartContext) {
+    throw new Error('CartContext must be used within CartProvider');
+  }
+  
+  const { currentDensityCalculation, loading } = cartContext;
+  const { getOrCreateDraftCalculation, addPopulationToDensityCalculation } = cartContext;
+  
   const [imageError, setImageError] = useState(false);
   const [imageSrc, setImageSrc] = useState<string>('');
   const [adding, setAdding] = useState(false);
@@ -66,13 +71,11 @@ const PopulationCard: React.FC<PopulationCardProps> = ({ population }) => {
     setAddError('');
     
     try {
-      // Получаем ID расчета плотности
       let densityCalculationId = currentDensityCalculation?.id;
       
-      // Если расчета нет, создаем черновик
       if (!densityCalculationId) {
         try {
-          const draftResult = await dispatch(getOrCreateDraftCalculation()).unwrap();
+          const draftResult = await getOrCreateDraftCalculation();
           densityCalculationId = draftResult.density_calculation_id;
           
           if (!densityCalculationId) {
@@ -88,11 +91,8 @@ const PopulationCard: React.FC<PopulationCardProps> = ({ population }) => {
         }
       }
       
-      const result = await dispatch(addPopulationToDensityCalculation({ 
-        populationId: population.id,
-        densityCalculationId,
-        comment: `Добавлено: ${new Date().toLocaleString('ru-RU')}`
-      })).unwrap();
+      await addPopulationToDensityCalculation(population.id, densityCalculationId, 
+        `Добавлено: ${new Date().toLocaleString('ru-RU')}`);
       
       alert(`✅ Тип населения "${population.title}" добавлен в расчет плотности!`);
       
